@@ -53,6 +53,6 @@ python src/main.py --config var/config.yml
 ```
 
 #### Verify your output
-Navigate to your Lattice UI and verify that the vessel entities are displayed in the common operational picture.
+Navigate to your Lattice UI and verify that the vessel entities are displayed.
 
 Congrats! You've successfully used the Lattice SDK to create and publish entities to Lattice!
