@@ -3,17 +3,14 @@
 ## Description
 This is a sample application showcasing an integration between AIS vessel traffic data and Lattice.
 
-This sample application vended the Python Lattice gRPC SDK to initialize the entity.
+The sample application demonstrates how to use the Python Lattice gRPC SDK for initializing an entity and features the `publish_entity` endpoint to illustrate publishing an entity to the Lattice API.
 
-Showcasing here is the publish_entity endpoint to publish an entity to the Lattice API.
-
-The AIS (Automatic Identification System) vessel traffic dataset is a repository of vessel identification and positioning data. The data is collected by the U.S. Coast Guard through an onboard navigation safety device that transmits and monitors the location and characteristics of vessels in U.S. and international waters in real time. For this sample demonstration, the only 4 fields in the dataset that we are interested in are the MMSI, latitude, longitude, and vessel name.
-
-We will use these data fields to simulate the position of a vessel at the user's current time, and publish their current location to Lattice continuously.
-
-We retrieve the vessel data from the `var/ais_vessels.csv` file in the directory. We use the Lattice SDK to publish the vessel data to Lattice.
+The AIS (Automatic Identification System) vessel traffic dataset is a repository of vessel identification and positioning data. The data is collected through an onboard navigation safety device that transmits and monitors the location and characteristics of vessels in U.S. and international waters in real time. For this sample demonstration, the only 4 fields in the dataset that we are interested in are the MMSI, latitude, longitude, and vessel name. These fields are used to simulate maritime traffic, creating and continuously updating vessel entities with their latest position and publishing them to the Lattice API in real-time.
 
 ## How to run locally
+
+#### Prerequisites
+- Python version greater than or equal to 3.9
 
 #### Before you begin
 Ensure you have [set up your development environment](https://docs.anduril.com/get-started)
@@ -25,27 +22,31 @@ git clone https://github.com/anduril/sample-app-ais-integration-grpc.git sample-
 cd sample-app-ais-integration-grpc
 ```
 
-A prerequisite to run this program is a Python version greater than or equal to 3.9
-
 > Optional: Initialize a virtual environment
 > ```bash
 > python -m venv .venv
 > source .venv/bin/activate
 > ```
 
-#### Install dependencies
+#### Install dependencies and configure project
 
-Install the dependencies used for this project:
-```bash
-pip install -r requirements.txt
-```
+1. Install the dependencies used for this project:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2. Modify the configuration file in `var/config.yml`:
+* Replace `<YOUR_LATTICE_IP>` and `<YOUR_LATTICE_BEARER_TOKEN>` with your Lattice IP and Lattice Bearer Token
+    ```
+    lattice-ip: <YOUR_LATTICE_IP>
+    lattice-bearer-token: <YOUR_LATTICE_BEARER_TOKEN>
+    ```
+* If you would like, you can also modify:
+    - `entity-update-rate-seconds`: to change the interval between publishing vessel entities
+    - `vessel-mmsi`: to change the vessels to track
+    - `ais-generate-interval-seconds`: to change the interval between generating vessel data
 
 #### Run the program
-
-Modify the configuration file in `var/config.yml`, add your Lattice IP and Lattice Bearer Token. If you would like, you can modify:
-- `entity-update-rate-seconds`: to change the interval between publishing vessel entities
-- `vessel-mmsi`: to change the vessels to track
-- `ais-generate-interval-seconds`: to change the interval between generating vessel data
 
 Run the following command to start the program
 ```bash

@@ -2,15 +2,26 @@ from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
 
-import anduril.entitymanager.v1
 import anduril.ontology.v1
-import anduril.type
 from anduril.entitymanager.v1 import (
     EntityManagerApiStub,
     GetEntityRequest,
-    Entity,
     GetEntityResponse,
+    PublishEntityRequest,
     PublishEntityResponse,
+    Entity,
+    Aliases,
+    AlternateId,
+    AltIdType,
+    MilView,
+    Location,
+    Position,
+    Ontology,
+    Template,
+    Provenance,
+    Classification,
+    ClassificationInformation,
+    ClassificationLevels
 )
 from grpclib.client import Channel
 
@@ -75,7 +86,7 @@ class Lattice:
 
         try:
             response = await entity_manager_stub.publish_entity(
-                anduril.entitymanager.v1.PublishEntityRequest(entity=entity),
+                PublishEntityRequest(entity=entity),
                 metadata=self.generated_metadata,
             )
             channel.close()
@@ -98,13 +109,13 @@ class Lattice:
 
         Returns:
             Entity: The generated entity with the basic attributes filled out:
-                - entity_id: The vessel's MMSI (blank if not provided).
+                - entity_id: The vessel's MMSI.
                 - description: A description of the vessel.
                 - is_live: A boolean indicating whether the entity is live.
                 - created_time: The time the entity was created.
                 - expiry_time: The time the entity expires.
                 - aliases: The aliases for the entity, including the vessel's MMSI.
-                - mil_view: The military view for the entity.
+                - mil_view: View of the entity.
                 - location: The location of the entity, including latitude, longitude, and altitude.
                 - ontology: The ontology for the entity, including the template, platform type, and specific type.
                 - provenance: The provenance for the entity, including the data type, integration name, and source update time.
@@ -118,38 +129,38 @@ class Lattice:
             created_time=datetime.now(timezone.utc),
             expiry_time=datetime.now(timezone.utc)
             + timedelta(seconds=EXPIRY_OFFSET_SECONDS),
-            aliases=anduril.entitymanager.v1.Aliases(
+            aliases=Aliases(
                 name=vessel_data.VesselName,
                 alternate_ids=[
-                    anduril.entitymanager.v1.AlternateId(
+                    AlternateId(
                         id=str(vessel_data.MMSI),
-                        type=anduril.entitymanager.v1.AltIdType.MMSI_ID,
+                        type=AltIdType.MMSI_ID,
                     )
                 ],
             ),
-            mil_view=anduril.entitymanager.v1.MilView(
+            mil_view=MilView(
                 disposition=anduril.ontology.v1.Disposition.NEUTRAL,
                 environment=anduril.ontology.v1.Environment.SURFACE,
             ),
-            location=anduril.entitymanager.v1.Location(
-                position=anduril.entitymanager.v1.Position(
+            location=Location(
+                position=Position(
                     latitude_degrees=vessel_data.LAT,
                     longitude_degrees=vessel_data.LON,
                 ),
             ),
-            ontology=anduril.entitymanager.v1.Ontology(
-                template=anduril.entitymanager.v1.Template.TRACK,
+            ontology=Ontology(
+                template=Template.TRACK,
                 # For more information, please refer to https://docs.anduril.com/entity/publishing-your-first-entity#define-ontology
                 platform_type="Surface_Vessel",
             ),
-            provenance=anduril.entitymanager.v1.Provenance(
+            provenance=Provenance(
                 data_type="vessel-data",
                 integration_name="ais-sample-integration",
                 source_update_time=datetime.now(timezone.utc),
             ),
-            data_classification=anduril.entitymanager.v1.Classification(
-                default=anduril.entitymanager.v1.ClassificationInformation(
-                    level=anduril.entitymanager.v1.ClassificationLevels.UNCLASSIFIED,
+            data_classification=Classification(
+                default=ClassificationInformation(
+                    level=ClassificationLevels.UNCLASSIFIED,
                 )
             ),
         )
