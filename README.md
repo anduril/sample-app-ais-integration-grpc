@@ -3,7 +3,7 @@
 ## Description
 This is a sample application showcasing an integration between AIS vessel traffic data and Lattice.
 
-The sample application demonstrates how to use the Python Lattice gRPC SDK for initializing an entity and features the `publish_entity` endpoint to illustrate publishing an entity to the Lattice API.
+The sample application demonstrates how to use the Lattice gRPC SDK for initializing an entity and features the `publish_entity` endpoint to illustrate publishing an entity to the Lattice API.
 
 The AIS (Automatic Identification System) vessel traffic dataset is a repository of vessel identification and positioning data. The data is collected through an onboard navigation safety device that transmits and monitors the location and characteristics of vessels in U.S. and international waters in real time. For this sample demonstration, the only 4 fields in the dataset that we are interested in are the MMSI, latitude, longitude, and vessel name. These fields are used to simulate maritime traffic, creating and continuously updating vessel entities with their latest position and publishing them to the Lattice API in real-time.
 
@@ -13,7 +13,7 @@ The AIS (Automatic Identification System) vessel traffic dataset is a repository
 - Python version greater than or equal to 3.9
 
 #### Before you begin
-Ensure you have [set up your development environment](https://docs.anduril.com/get-started)
+Ensure you have [set up your development environment](https://docs.anduril.com/category/getting-started)
 
 #### Clone the repository
 

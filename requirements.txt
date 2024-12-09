@@ -2,5 +2,4 @@ APScheduler==3.10.4
 grpclib==0.4.7
 PyYAML==6.0.2
 pandas==2.2.3
-#anduril-lattice-sdk==1.0.0
-anduril @ git+https://github.com/anduril/lattice-sdk-python.git@252843ed242f6b0248113996201cfc0601855211
+anduril-lattice-sdk==1.0.0
