@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="AIS Vessel to Lattice Mesh Integration")
     parser.add_argument(
-        "--config", action="store", dest="configpath", default="../var/config.yml"
+        "--config", action="store", dest="configpath", default="var/config.yml"
     )
     args = parser.parse_args()
 

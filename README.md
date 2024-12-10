@@ -53,6 +53,9 @@ Run the following command to start the program
 python src/main.py --config var/config.yml
 ```
 
+Note: If you don't provide the `--config` option the app will look for the config path `var/config.yml`
+relative to the current working directory.
+
 #### Verify your output
 Navigate to your Lattice UI and verify that the vessel entities are displayed.
 
