@@ -51,7 +51,7 @@ if __name__ == "__main__":
         cfg["vessel-mmsi"]
     )
 
-    lattice_api = Lattice(logger, cfg["lattice-ip"], cfg["lattice-bearer-token"])
+    lattice_api = Lattice(logger, cfg["lattice-ip"], cfg["lattice-bearer-token"], cfg["sandbox-token"])
 
     ais_lattice_integration_hook = AISLatticeIntegration(
         logger, lattice_api, ais_data

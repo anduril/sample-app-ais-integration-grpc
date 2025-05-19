@@ -41,6 +41,11 @@ cd sample-app-ais-integration-grpc
     lattice-ip: <YOUR_LATTICE_IP>
     lattice-bearer-token: <YOUR_LATTICE_BEARER_TOKEN>
     ```
+* If you are using a Lattice Sandbox also add your sandboxes portal token
+    ```
+    sandbox-token: <YOUR_SANDBOX_TOKEN>
+    ```
+
 * If you would like, you can also modify:
     - `entity-update-rate-seconds`: to change the interval between publishing vessel entities
     - `vessel-mmsi`: to change the vessels to track

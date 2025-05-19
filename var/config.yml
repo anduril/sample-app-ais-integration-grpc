@@ -2,6 +2,8 @@
 lattice-ip: $YOUR_LATTICE_URL
 # lattice-bearer-token
 lattice-bearer-token: $YOUR_BEARER_TOKEN
+# if using lattice sandboxes add token from sandboxes portal / Account and Security
+sandbox-token: $YOUR_SANDBOX_TOKEN
 # entity update frequency (seconds)
 entity-update-rate-seconds: 1
 # vessels to track
