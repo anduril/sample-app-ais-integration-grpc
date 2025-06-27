@@ -2,9 +2,7 @@ from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
 
-# import anduril.ontology
 from anduril.entitymanager.v1.entity_manager_grpcapi_pb2_grpc import EntityManagerAPIStub
-# import anduril.entitymanager.v1.entity_manager_grpcapi_pb2 as entity_manager_grpcapi
 
 from anduril.entitymanager.v1.entity_manager_grpcapi_pb2 import (
     GetEntityRequest,
