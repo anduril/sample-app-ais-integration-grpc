@@ -1,5 +1,7 @@
 APScheduler==3.10.4
-grpclib==0.4.7
+grpcio==1.73.1
 PyYAML==6.0.2
 pandas==2.2.3
-anduril-lattice-sdk==1.0.1
+
+--extra-index-url https://buf.build/gen/python
+anduril-industries-lattice-sdk-test-grpc-python==1.73.0.1.20250618164314+ff008ac65884
