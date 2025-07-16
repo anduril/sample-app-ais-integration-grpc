@@ -4,4 +4,4 @@ PyYAML==6.0.2
 pandas==2.2.3
 
 --extra-index-url https://buf.build/gen/python
-anduril-industries-lattice-sdk-test-grpc-python==1.73.0.1.20250618164314+ff008ac65884
+anduril-lattice-sdk-grpc-python==1.73.1.1.20250716223851+f58576d79c34
