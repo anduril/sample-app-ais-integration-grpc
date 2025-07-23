@@ -2,41 +2,41 @@ from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
 
-from anduril.entitymanager.v1.entity_manager_grpcapi_pb2_grpc import EntityManagerAPIStub
+from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2_grpc import EntityManagerAPIStub
 
-from anduril.entitymanager.v1.entity_manager_grpcapi_pb2 import (
+from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2 import (
     GetEntityRequest,
     GetEntityResponse,
     PublishEntityRequest,
     PublishEntityResponse,
 )
 
-from anduril.entitymanager.v1.entity_pb2 import(
+from anduril.entitymanager.v1.entity.pub_pb2 import(
     Aliases,
     AlternateId,
     Entity, 
     Provenance,
 )
-from anduril.entitymanager.v1.classification_pb2 import(
+from anduril.entitymanager.v1.classification.pub_pb2 import(
     Classification,
     ClassificationInformation,
     ClassificationLevels,
 )
 
-from anduril.entitymanager.v1.location_pb2 import (
+from anduril.entitymanager.v1.location.pub_pb2 import (
     Location,
     Position,
 )
-from anduril.entitymanager.v1.types_pb2 import (
+from anduril.entitymanager.v1.types.pub_pb2 import (
     AltIdType,
     Template,
 )
-from anduril.entitymanager.v1.ontology_pb2 import(
+from anduril.entitymanager.v1.ontology.pub_pb2 import(
     MilView,
     Ontology,
 )
 
-from anduril.ontology.v1.type_pb2 import (
+from anduril.ontology.v1.type.pub_pb2 import (
     Disposition,
     Environment,
 )
