@@ -48,13 +48,13 @@ EXPIRY_OFFSET_SECONDS = 10
 PORT = 443
 
 class Lattice:
-    def __init__(self, logger: Logger, lattice_ip: str, bearer_token: str, sandbox_token: str):
+    def __init__(self, logger: Logger, lattice_endpoint: str, environment_token: str, sandboxes_token: str):
         self.logger = logger
-        self.lattice_ip = lattice_ip
+        self.lattice_endpoint = lattice_endpoint
         self.port = PORT
-        self.generated_metadata = (("authorization", "Bearer " + bearer_token),)
-        if sandbox_token:
-            self.generated_metadata = self.generated_metadata + (("anduril-sandbox-authorization", f"Bearer {sandbox_token}"),)
+        self.generated_metadata = (("authorization", "Bearer " + environment_token),)
+        if sandboxes_token:
+            self.generated_metadata = self.generated_metadata + (("anduril-sandbox-authorization", f"Bearer {sandboxes_token}"),)
 
     async def get_entity(self, entity_id) -> Optional[GetEntityResponse]:
         """
