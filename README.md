@@ -16,8 +16,8 @@ The AIS (Automatic Identification System) vessel traffic dataset is a repository
 ## Clone the repository
 
 ```bash
-git clone https://github.com/anduril/sample-app-ais-integration-rest.git sample-app-ais-integration-rest
-cd sample-app-ais-integration-rest
+git clone https://github.com/anduril/sample-app-ais-integration-grpc.git sample-app-ais-integration-grpc
+cd sample-app-ais-integration-grpc
 ```
 
 > Optional: Initialize a virtual environment
