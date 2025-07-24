@@ -14,10 +14,10 @@ from ais import AIS
 DATASET_PATH = "var/ais_vessels.csv"
 
 def validate_config(cfg):
-    if "lattice-ip" not in cfg:
-        raise ValueError("missing lattice-ip")
-    if "lattice-bearer-token" not in cfg:
-        raise ValueError("missing lattice-bearer-token")
+    if "lattice-endpoint" not in cfg:
+        raise ValueError("missing lattice-endpoint")
+    if "environment-token" not in cfg:
+        raise ValueError("missing environment-token")
     if "entity-update-rate-seconds" not in cfg:
         raise ValueError("missing entity-update-rate-seconds")
     if "vessel-mmsi" not in cfg:
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         cfg["vessel-mmsi"]
     )
 
-    lattice_api = Lattice(logger, cfg["lattice-ip"], cfg["lattice-bearer-token"], cfg["sandbox-token"])
+    lattice_api = Lattice(logger, cfg["lattice-endpoint"], cfg["environment-token"], cfg["sandboxes-token"])
 
     ais_lattice_integration_hook = AISLatticeIntegration(
         logger, lattice_api, ais_data
