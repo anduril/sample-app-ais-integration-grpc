@@ -2,41 +2,59 @@ from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
 
-import anduril.ontology.v1
-from anduril.entitymanager.v1 import (
-    EntityManagerApiStub,
+from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2_grpc import EntityManagerAPIStub
+
+from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2 import (
     GetEntityRequest,
     GetEntityResponse,
     PublishEntityRequest,
     PublishEntityResponse,
-    Entity,
+)
+
+from anduril.entitymanager.v1.entity.pub_pb2 import(
     Aliases,
     AlternateId,
-    AltIdType,
-    MilView,
-    Location,
-    Position,
-    Ontology,
-    Template,
+    Entity, 
     Provenance,
+)
+from anduril.entitymanager.v1.classification.pub_pb2 import(
     Classification,
     ClassificationInformation,
-    ClassificationLevels
+    ClassificationLevels,
 )
-from grpclib.client import Channel
 
+from anduril.entitymanager.v1.location.pub_pb2 import (
+    Location,
+    Position,
+)
+from anduril.entitymanager.v1.types.pub_pb2 import (
+    AltIdType,
+    Template,
+)
+from anduril.entitymanager.v1.ontology.pub_pb2 import(
+    MilView,
+    Ontology,
+)
+
+from anduril.ontology.v1.type.pub_pb2 import (
+    Disposition,
+    Environment,
+)
+
+import grpc
 from ais import VesselData
 
 EXPIRY_OFFSET_SECONDS = 10
-
+PORT = 443
 
 class Lattice:
     def __init__(self, logger: Logger, lattice_ip: str, bearer_token: str, sandbox_token: str):
         self.logger = logger
         self.lattice_ip = lattice_ip
-        self.generated_metadata = {"authorization": "Bearer " + bearer_token}
+        self.port = PORT
+        self.generated_metadata = (("authorization", "Bearer " + bearer_token),)
         if sandbox_token:
-            self.generated_metadata["anduril-sandbox-authorization"] = f"Bearer {sandbox_token}"
+            self.generated_metadata = self.generated_metadata + (("anduril-sandbox-authorization", f"Bearer {sandbox_token}"),)
 
     async def get_entity(self, entity_id) -> Optional[GetEntityResponse]:
         """
@@ -54,11 +72,12 @@ class Lattice:
             None
 
         """
-        channel = Channel(host=self.lattice_ip, port=443, ssl=True)
-        entity_manager_stub = EntityManagerApiStub(channel)
+        credentials = grpc.ssl_channel_credentials()
+        channel = grpc.aio.secure_channel(f"{self.lattice_ip}:{self.port}", credentials)
+        entity_manager_stub = EntityManagerAPIStub(channel)
 
         try:
-            response = await entity_manager_stub.get_entity(
+            response = await entity_manager_stub.GetEntity(
                 GetEntityRequest(entity_id=entity_id), metadata=self.generated_metadata
             )
             channel.close()
@@ -83,13 +102,14 @@ class Lattice:
         Raises:
             None
         """
-        channel = Channel(host=self.lattice_ip, port=443, ssl=True)
-        entity_manager_stub = EntityManagerApiStub(channel)
+        credentials = grpc.ssl_channel_credentials()
+        channel = grpc.aio.secure_channel(f"{self.lattice_ip}:{self.port}", credentials)
+        entity_manager_stub = EntityManagerAPIStub(channel)
 
         try:
-            response = await entity_manager_stub.publish_entity(
+            response = await entity_manager_stub.PublishEntity(
                 PublishEntityRequest(entity=entity),
-                metadata=self.generated_metadata,
+                metadata=self.generated_metadata
             )
             channel.close()
             return response
@@ -135,13 +155,13 @@ class Lattice:
                 alternate_ids=[
                     AlternateId(
                         id=str(vessel_data.MMSI),
-                        type=AltIdType.MMSI_ID,
+                        type=AltIdType.ALT_ID_TYPE_MMSI_ID,
                     )
                 ],
             ),
             mil_view=MilView(
-                disposition=anduril.ontology.v1.Disposition.NEUTRAL,
-                environment=anduril.ontology.v1.Environment.SURFACE,
+                disposition=Disposition.DISPOSITION_NEUTRAL,
+                environment=Environment.ENVIRONMENT_SURFACE,
             ),
             location=Location(
                 position=Position(
@@ -150,7 +170,7 @@ class Lattice:
                 ),
             ),
             ontology=Ontology(
-                template=Template.TRACK,
+                template=Template.TEMPLATE_TRACK,
                 # For more information, please refer to https://docs.anduril.com/entity/publishing-your-first-entity#define-ontology
                 platform_type="Surface_Vessel",
             ),
@@ -161,7 +181,7 @@ class Lattice:
             ),
             data_classification=Classification(
                 default=ClassificationInformation(
-                    level=ClassificationLevels.UNCLASSIFIED,
+                    level=ClassificationLevels.CLASSIFICATION_LEVELS_UNCLASSIFIED,
                 )
             ),
         )
