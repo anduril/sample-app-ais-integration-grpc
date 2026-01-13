@@ -3,7 +3,6 @@ import logging
 import os
 import time
 from asyncio import run
-import google.auth
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler

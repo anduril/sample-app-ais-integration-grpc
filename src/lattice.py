@@ -2,9 +2,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
-import requests
-
-import time
 
 from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2_grpc import EntityManagerAPIStub
 
@@ -46,6 +43,9 @@ from anduril.ontology.v1.type.pub_pb2 import (
 )
 
 import grpc
+import requests
+import time
+
 from ais import VesselData
 
 EXPIRY_OFFSET_SECONDS = 10
@@ -64,11 +64,11 @@ class Lattice:
             self.generated_metadata = (("anduril-sandbox-authorization", f"Bearer {sandboxes_token}"),)
         
         self.token_expiry_time = 0
-        self.access_token = ""
+        self.auth_token = ""
         self.refresh_token()
 
 
-        self.generated_metadata = self.generated_metadata + (("authorization", "Bearer " + self.access_token),)
+        self.generated_metadata = self.generated_metadata + (("authorization", "Bearer " + self.auth_token),)
 
         self.scheduler = BackgroundScheduler()
         self.scheduler.add_job(
@@ -94,11 +94,11 @@ class Lattice:
                     data=data
                 )
                 if (response.status_code == 200):
-                    self.access_token = response.json()["access_token"]
+                    self.auth_token = response.json()["auth_token"]
                     self.token_expiry_time = time.time() + response.json()["expires_in"]
                     return 
                 else: 
-                    raise Exception(f"Authentication failure: {response.json()}")
+                    raise Exception(f"Failed to get auth token: {response.json()}")
         except Exception as err:
             self.logger.error(err)
             return

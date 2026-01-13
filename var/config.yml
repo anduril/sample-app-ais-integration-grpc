@@ -11,4 +11,4 @@ vessel-mmsi:
     - 368179250 # SEAHAWK
     - 368138010 # NEW YORK
 # vessel data generation time interval (seconds)
-ais-generate-interval-seconds: 2
+ais-generate-interval-seconds: 1
