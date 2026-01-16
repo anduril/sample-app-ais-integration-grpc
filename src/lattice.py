@@ -1,3 +1,4 @@
+from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
@@ -42,19 +43,67 @@ from anduril.ontology.v1.type.pub_pb2 import (
 )
 
 import grpc
+import requests
+import time
+
 from ais import VesselData
 
 EXPIRY_OFFSET_SECONDS = 10
 PORT = 443
 
 class Lattice:
-    def __init__(self, logger: Logger, lattice_endpoint: str, environment_token: str, sandboxes_token: str):
+    def __init__(self, logger: Logger, lattice_endpoint: str, sandboxes_token: str, client_id: str, client_secret: str):       
         self.logger = logger
         self.lattice_endpoint = lattice_endpoint
         self.port = PORT
-        self.generated_metadata = (("authorization", "Bearer " + environment_token),)
+        self.client_id = client_id
+        self.client_secret = client_secret
+
         if sandboxes_token:
-            self.generated_metadata = self.generated_metadata + (("anduril-sandbox-authorization", f"Bearer {sandboxes_token}"),)
+            self.sandboxes_token = sandboxes_token
+            self.generated_metadata = (("anduril-sandbox-authorization", f"Bearer {sandboxes_token}"),)
+        
+        self.token_expiry_time = 0
+        self.auth_token = ""
+        self.refresh_token()
+
+
+        self.generated_metadata = self.generated_metadata + (("authorization", "Bearer " + self.auth_token),)
+
+        self.scheduler = BackgroundScheduler()
+        self.scheduler.add_job(
+            self.refresh_token, "interval", seconds=60
+        )
+        self.scheduler.start()
+
+    def refresh_token(self):
+        try:
+            if time.time() + 300 > self.token_expiry_time:
+                headers = {
+                    "anduril-sandbox-authorization" : f"Bearer {self.sandboxes_token}",
+                    "Content-Type": "application/x-www-form-urlencoded"
+                    }
+                data = {
+                    "grant_type": "client_credentials",
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret
+                }
+                response = requests.post(
+                    url=f"https://{self.lattice_endpoint}/api/v1/oauth/token", 
+                    headers=headers,
+                    data=data
+                )
+                if (response.status_code == 200):
+                    self.auth_token = response.json()["auth_token"]
+                    self.token_expiry_time = time.time() + response.json()["expires_in"]
+                    return 
+                else: 
+                    raise Exception(f"Failed to get auth token: {response.json()}")
+        except Exception as err:
+            self.logger.error(err)
+            return
+
+
 
     async def get_entity(self, entity_id) -> Optional[GetEntityResponse]:
         """
@@ -73,7 +122,7 @@ class Lattice:
 
         """
         credentials = grpc.ssl_channel_credentials()
-        channel = grpc.aio.secure_channel(f"{self.lattice_ip}:{self.port}", credentials)
+        channel = grpc.aio.secure_channel(f"{self.lattice_endpoint}:{self.port}", credentials)
         entity_manager_stub = EntityManagerAPIStub(channel)
 
         try:
@@ -103,7 +152,7 @@ class Lattice:
             None
         """
         credentials = grpc.ssl_channel_credentials()
-        channel = grpc.aio.secure_channel(f"{self.lattice_ip}:{self.port}", credentials)
+        channel = grpc.aio.secure_channel(f"{self.lattice_endpoint}:{self.port}", credentials)
         entity_manager_stub = EntityManagerAPIStub(channel)
 
         try:
@@ -111,7 +160,7 @@ class Lattice:
                 PublishEntityRequest(entity=entity),
                 metadata=self.generated_metadata
             )
-            channel.close()
+            await channel.close()
             return response
         except Exception as error:
             self.logger.error(f"lattice api publish entity error {error}")

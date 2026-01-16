@@ -30,7 +30,7 @@ class AISLatticeIntegration:
             entity = Lattice.generate_new_entity(vessel_data)
 
             self.logger.debug(
-                f"MMSI={vessel_data.MMSI} VESSEL NAME={vessel_data.VesselName}\n\t{entity}"
+                f"MMSI={vessel_data.MMSI} VESSEL NAME={vessel_data.VesselName}"
             )
 
             await self.lattice_api.publish_entity(entity)
