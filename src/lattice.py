@@ -3,9 +3,9 @@ from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
 
-from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2_grpc import EntityManagerAPIStub
+from anduril.entitymanager.v1.entity_manager_api.pub_pb2_grpc import EntityManagerAPIStub
 
-from anduril.entitymanager.v1.entity_manager_grpcapi.pub_pb2 import (
+from anduril.entitymanager.v1.entity_manager_api.pub_pb2 import (
     GetEntityRequest,
     GetEntityResponse,
     PublishEntityRequest,
@@ -67,7 +67,6 @@ class Lattice:
         self.auth_token = ""
         self.refresh_token()
 
-
         self.generated_metadata = self.generated_metadata + (("authorization", "Bearer " + self.auth_token),)
 
         self.scheduler = BackgroundScheduler()
@@ -93,14 +92,15 @@ class Lattice:
                     headers=headers,
                     data=data
                 )
+                
                 if (response.status_code == 200):
-                    self.auth_token = response.json()["auth_token"]
+                    self.auth_token = response.json()["access_token"]
                     self.token_expiry_time = time.time() + response.json()["expires_in"]
                     return 
                 else: 
                     raise Exception(f"Failed to get auth token: {response.json()}")
         except Exception as err:
-            self.logger.error(err)
+            self.logger.error("Failed to refresh token: %s", err)
             return
 
 
