@@ -30,7 +30,7 @@ cd sample-app-ais-integration-grpc
 
 1. Install the dependencies used for this project:
     ```bash
-    pip install -r requirements.txt
+    uv sync
     ```
 1. Modify the configuration file in `var/config.yml`:
     * Replace `<ENVIRONMENT_TOKEN>`, `<SANDBOXES_TOKEN>` and `<LATTICE_ENDPOINT>` with your environment endpoint and tokens. For information on how to obtain these tokens, see the [Sandboxes documentation](https://developer.anduril.com/guides/getting-started/sandboxes#get-the-tokens).
@@ -43,7 +43,7 @@ cd sample-app-ais-integration-grpc
 
 Run the following command to start the app
 ```bash
-python src/main.py --config var/config.yml
+uv run python src/main.py --config var/config.yml
 ```
 
 ## Verify the output

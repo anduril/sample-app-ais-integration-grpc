@@ -20,6 +20,8 @@ def validate_config(cfg):
         raise ValueError("missing lattice-client-id")
     if "lattice-client-secret" not in cfg:
         raise ValueError("missing lattice-client-secret")
+    if "sandboxes-token" not in cfg:
+        raise ValueError("missing sandboxes-token")
     if "entity-update-rate-seconds" not in cfg:
         raise ValueError("missing entity-update-rate-seconds")
     if "vessel-mmsi" not in cfg:
@@ -53,7 +55,7 @@ if __name__ == "__main__":
         cfg["vessel-mmsi"]
     )
 
-    lattice_api = Lattice(logger, cfg["lattice-endpoint"], client_id=cfg["lattice-client-id"], client_secret=cfg["lattice-client-secret"], sandboxes_token=cfg["sandboxes-token"])
+    lattice_api = Lattice(logger, cfg["lattice-endpoint"], sandboxes_token=cfg["sandboxes-token"], client_id=cfg["lattice-client-id"], client_secret=cfg["lattice-client-secret"])
 
     ais_lattice_integration_hook = AISLatticeIntegration(
         logger, lattice_api, ais_data
