@@ -13,6 +13,7 @@ from ais import AIS
 
 DATASET_PATH = "var/ais_vessels.csv"
 
+
 def validate_config(cfg):
     if "lattice-endpoint" not in cfg:
         raise ValueError("missing lattice-endpoint")
@@ -36,7 +37,9 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     logger.info("starting ais-lattice-integration")
 
-    parser = argparse.ArgumentParser(description="AIS Vessel to Lattice Mesh Integration")
+    parser = argparse.ArgumentParser(
+        description="AIS Vessel to Lattice Mesh Integration"
+    )
     parser.add_argument(
         "--config", action="store", dest="configpath", default="var/config.yml"
     )
@@ -49,23 +52,21 @@ if __name__ == "__main__":
     # range check the ais dataset generation interval
     generate_interval = max(1, min(cfg["ais-generate-interval-seconds"], 60))
 
-    ais_data = AIS(
+    ais_data = AIS(logger, DATASET_PATH, cfg["vessel-mmsi"])
+
+    lattice_api = Lattice(
         logger,
-        DATASET_PATH,
-        cfg["vessel-mmsi"]
+        cfg["lattice-endpoint"],
+        sandboxes_token=cfg["sandboxes-token"],
+        client_id=cfg["lattice-client-id"],
+        client_secret=cfg["lattice-client-secret"],
     )
 
-    lattice_api = Lattice(logger, cfg["lattice-endpoint"], sandboxes_token=cfg["sandboxes-token"], client_id=cfg["lattice-client-id"], client_secret=cfg["lattice-client-secret"])
-
-    ais_lattice_integration_hook = AISLatticeIntegration(
-        logger, lattice_api, ais_data
-    )
+    ais_lattice_integration_hook = AISLatticeIntegration(logger, lattice_api, ais_data)
 
     # Running the fetch job in the background, spin up a second job to periodically publish entities.
     scheduler = BackgroundScheduler()
-    scheduler.add_job(
-        ais_data.refresh_ais, "interval", seconds=generate_interval
-    )
+    scheduler.add_job(ais_data.refresh_ais, "interval", seconds=generate_interval)
     scheduler.add_job(
         lambda: run(ais_lattice_integration_hook.publish_vessels_as_entities()),
         "interval",

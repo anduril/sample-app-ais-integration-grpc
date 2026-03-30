@@ -10,7 +10,7 @@ The AIS (Automatic Identification System) vessel traffic dataset is a repository
 
 ## Before you begin
 
-- Install Python version greater than or equal to 3.9.
+- Install Python version greater than or equal to 3.10.
 - Complete the [set up](https://developer.anduril.com/guides/getting-started/set-up) instructions in the *Lattice SDK Documentation*.
 
 ## Clone the repository
