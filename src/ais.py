@@ -3,7 +3,8 @@ from logging import Logger
 from threading import Lock
 from collections import namedtuple
 
-VesselData = namedtuple('VesselData', ['MMSI', 'LAT', 'LON', 'VesselName'])
+VesselData = namedtuple("VesselData", ["MMSI", "LAT", "LON", "VesselName"])
+
 
 class AIS:
     def __init__(self, logger: Logger, csv_path: str, requested_mmsis: list[str]):
@@ -28,10 +29,15 @@ class AIS:
         self.cached_ais = {mmsi: None for mmsi in requested_mmsis}
         self.cached_ais_lock = Lock()
 
-        df = pd.read_csv(csv_path, usecols=['MMSI', 'LAT', 'LON', 'VesselName'])
+        df = pd.read_csv(csv_path, usecols=["MMSI", "LAT", "LON", "VesselName"])
         self.grouped_data = {
-            mmsi: iter(group.apply(lambda row: VesselData(row.MMSI, row.LAT, row.LON, row.VesselName), axis=1))
-            for mmsi, group in df.groupby('MMSI')
+            mmsi: iter(
+                group.apply(
+                    lambda row: VesselData(row.MMSI, row.LAT, row.LON, row.VesselName),
+                    axis=1,
+                )
+            )
+            for mmsi, group in df.groupby("MMSI")
         }
 
     def __fetch_next_entry(self, mmsi):
@@ -47,13 +53,15 @@ class AIS:
         try:
             return next(self.grouped_data[mmsi])
         except StopIteration:
-            self.logger.info(f"MMSI {mmsi} data generation complete - no more incoming vessel data for this MMSI")
+            self.logger.info(
+                f"MMSI {mmsi} data generation complete - no more incoming vessel data for this MMSI"
+            )
             return None
 
     def refresh_ais(self):
         """
         Refreshes the AIS data by fetching the next entry for each requested MMSI and updating the cached AIS data.
-        
+
         Parameters:
             None
 
