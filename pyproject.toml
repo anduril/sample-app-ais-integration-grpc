@@ -7,7 +7,7 @@ dependencies = [
     "APScheduler==3.10.4",
     "grpcio==1.80.0",
     "PyYAML==6.0.2",
-    "pandas==2.2.3",
+    "pandas==2.3.3",
     "requests",
     "protobuf==7.34.1",
     "anduril-lattice-sdk-grpc-python==1.78.1.1.20260306171407",
