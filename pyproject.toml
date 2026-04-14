@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AIS to Lattice Integration - gRPC sample application"
 requires-python = ">=3.10"
 dependencies = [
-    "APScheduler==3.10.4",
+    "APScheduler==3.11.2",
     "grpcio==1.80.0",
     "PyYAML==6.0.2",
     "pandas==2.2.3",
