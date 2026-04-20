@@ -1,0 +1,143 @@
+name: Bump Buf packages
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.EXT_GITHUB_PAT }}
+  GH_TOKEN: ${{ secrets.EXT_GITHUB_PAT }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-buf-packages
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Check for a new Buf release
+        id: check
+        run: |
+          set -euo pipefail
+
+          # Single pass over pyproject.toml: discover buf-sourced packages
+          # and their current pins; assert pins are consistent.
+          eval "$(python3 <<'PY'
+          import tomllib, shlex, sys
+          data = tomllib.load(open("pyproject.toml", "rb"))
+          sources = data.get("tool", {}).get("uv", {}).get("sources", {})
+          buf_names = [
+              n for n, c in sources.items()
+              if isinstance(c, dict) and c.get("index") == "buf"
+          ]
+          if not buf_names:
+              sys.exit("No buf packages found in pyproject.toml [tool.uv.sources]")
+
+          pins = {}
+          for d in data.get("project", {}).get("dependencies", []):
+              name, sep, ver = d.partition("==")
+              if sep and name.strip() in buf_names:
+                  pins[name.strip()] = ver.strip()
+
+          missing = [n for n in buf_names if n not in pins]
+          if missing:
+              sys.exit(f"Buf packages missing == pin in [project.dependencies]: {missing}")
+
+          versions = set(pins.values())
+          if len(versions) > 1:
+              sys.exit(f"Buf pins diverge in pyproject: {pins}")
+
+          print(f"BUF_PACKAGES={shlex.quote('\n'.join(buf_names))}")
+          print(f"CURRENT={shlex.quote(next(iter(versions)))}")
+          PY
+          )"
+
+          index_url="https://buf.build/gen/python/simple"
+          get_latest() {
+            curl -fsSL "$index_url/$1/" \
+              | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
+              | sort -V \
+              | tail -1
+          }
+
+          # Query each package's latest version; fail if they diverge
+          versions=$(while IFS= read -r pkg; do get_latest "$pkg"; done <<< "$BUF_PACKAGES" | sort -u)
+          if [[ $(wc -l <<< "$versions") -ne 1 ]]; then
+            echo "::error::Buf registry versions diverge:"$'\n'"$versions"
+            exit 1
+          fi
+          latest="$versions"
+
+          echo "Latest: $latest"
+          echo "Current: $CURRENT"
+
+          if [[ "$latest" == "$CURRENT" ]]; then
+            echo "Already at latest: no bump needed"
+            echo "needs_bump=false" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "needs_bump=true"
+              echo "latest=$latest"
+              echo "current=$CURRENT"
+              echo "branch=buf-updater/${latest##*.}"
+              echo "packages<<EOF"
+              echo "$BUF_PACKAGES"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for existing PR
+        id: pr
+        if: steps.check.outputs.needs_bump == 'true'
+        run: |
+          set -euo pipefail
+          branch="${{ steps.check.outputs.branch }}"
+          pr_number=$(gh pr list --state open --json number -H "$branch" --jq '.[0].number // empty')
+          if [[ -n "$pr_number" ]]; then
+            echo "PR already open on branch $branch (#$pr_number)"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update pyproject.toml and lockfile
+        if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          new="${{ steps.check.outputs.latest }}"
+          mapfile -t pkgs <<< "${{ steps.check.outputs.packages }}"
+          uv add "${pkgs[@]/%/==$new}"
+
+      - name: Configure Git
+        if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
+        run: |
+          git config --local user.email "190288625+anduril-gh-bot@users.noreply.github.com"
+          git config --local user.name "anduril-gh-bot"
+
+      - name: Commit and open PR
+        if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          branch="${{ steps.check.outputs.branch }}"
+          new="${{ steps.check.outputs.latest }}"
+          old="${{ steps.check.outputs.current }}"
+
+          git checkout -b "$branch"
+          git add pyproject.toml uv.lock
+          git commit -m "build(deps): bump Buf packages to $new"
+          git push -u origin "$branch"
+
+          gh pr create \
+            --base master \
+            --head "$branch" \
+            --title "build(deps): bump Buf packages to $new" \
+            --body "Bumps Buf-registry packages from \`buf.build/gen/python\` (\`$old\` → \`$new\`)."
