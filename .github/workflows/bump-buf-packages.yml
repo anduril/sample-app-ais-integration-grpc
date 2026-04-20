@@ -1,9 +1,15 @@
-name: Bump Buf packages
+name: Bump Lattice SDK Buf packages
+
+# Separate workflow for scheduling updates to lattice buf packages
+# since Dependabot can't resolve them
 
 on:
   schedule:
     - cron: "0 0 * * 1"
   workflow_dispatch:
+  # TEMP: remove before merging to master
+  push:
+    branches: [asomera/buf-pkg-update-workflow]
 
 env:
   GITHUB_TOKEN: ${{ secrets.EXT_GITHUB_PAT }}
@@ -13,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: bump-buf-packages
+  group: bump-lattice-buf
   cancel-in-progress: false
 
 jobs:
@@ -21,77 +27,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.EXT_GITHUB_PAT }}
 
       - uses: astral-sh/setup-uv@v7
 
-      - name: Check for a new Buf release
+      - name: Resolve versions
         id: check
         run: |
           set -euo pipefail
 
-          # Single pass over pyproject.toml: discover buf-sourced packages
-          # and their current pins; assert pins are consistent.
-          eval "$(python3 <<'PY'
-          import tomllib, shlex, sys
-          data = tomllib.load(open("pyproject.toml", "rb"))
-          sources = data.get("tool", {}).get("uv", {}).get("sources", {})
-          buf_names = [
-              n for n, c in sources.items()
-              if isinstance(c, dict) and c.get("index") == "buf"
-          ]
-          if not buf_names:
-              sys.exit("No buf packages found in pyproject.toml [tool.uv.sources]")
-
-          pins = {}
-          for d in data.get("project", {}).get("dependencies", []):
-              name, sep, ver = d.partition("==")
-              if sep and name.strip() in buf_names:
-                  pins[name.strip()] = ver.strip()
-
-          missing = [n for n in buf_names if n not in pins]
-          if missing:
-              sys.exit(f"Buf packages missing == pin in [project.dependencies]: {missing}")
-
-          versions = set(pins.values())
-          if len(versions) > 1:
-              sys.exit(f"Buf pins diverge in pyproject: {pins}")
-
-          print(f"BUF_PACKAGES={shlex.quote('\n'.join(buf_names))}")
-          print(f"CURRENT={shlex.quote(next(iter(versions)))}")
-          PY
-          )"
-
-          index_url="https://buf.build/gen/python/simple"
           get_latest() {
-            curl -fsSL "$index_url/$1/" \
+            curl -fsSL "https://buf.build/gen/python/simple/$1/" \
               | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
-              | sort -V \
-              | tail -1
+              | sort -V | tail -n1
           }
 
-          # Query each package's latest version; fail if they diverge
-          versions=$(while IFS= read -r pkg; do get_latest "$pkg"; done <<< "$BUF_PACKAGES" | sort -u)
-          if [[ $(wc -l <<< "$versions") -ne 1 ]]; then
-            echo "::error::Buf registry versions diverge:"$'\n'"$versions"
+          grpc=$(get_latest anduril-lattice-sdk-grpc-python)
+          pb=$(get_latest anduril-lattice-sdk-protocolbuffers-python)
+          pyi=$(get_latest anduril-lattice-sdk-protocolbuffers-pyi)
+
+          new_ts="${grpc##*.}"
+          if [[ "${pb##*.}" != "$new_ts" || "${pyi##*.}" != "$new_ts" ]]; then
+            echo "::error::Buf regen timestamps diverge: grpc=$grpc pb=$pb pyi=$pyi"
             exit 1
           fi
-          latest="$versions"
 
-          echo "Latest: $latest"
-          echo "Current: $CURRENT"
+          old_ts=$(grep -oE 'anduril-lattice-sdk-grpc-python==[0-9.]+' pyproject.toml \
+                   | head -n1 | awk -F. '{print $NF}')
 
-          if [[ "$latest" == "$CURRENT" ]]; then
-            echo "Already at latest: no bump needed"
+          echo "Latest regen: $new_ts"
+          echo "Current regen: $old_ts"
+
+          if [[ "$new_ts" == "$old_ts" ]]; then
             echo "needs_bump=false" >> "$GITHUB_OUTPUT"
           else
             {
               echo "needs_bump=true"
-              echo "latest=$latest"
-              echo "current=$CURRENT"
-              echo "branch=buf-updater/${latest##*.}"
-              echo "packages<<EOF"
-              echo "$BUF_PACKAGES"
-              echo "EOF"
+              echo "new_ts=$new_ts"
+              echo "old_ts=$old_ts"
+              echo "grpc=$grpc"
+              echo "pb=$pb"
+              echo "pyi=$pyi"
+              echo "branch=buf-updater/$new_ts"
             } >> "$GITHUB_OUTPUT"
           fi
 
@@ -100,44 +78,43 @@ jobs:
         if: steps.check.outputs.needs_bump == 'true'
         run: |
           set -euo pipefail
-          branch="${{ steps.check.outputs.branch }}"
-          pr_number=$(gh pr list --state open --json number -H "$branch" --jq '.[0].number // empty')
+          pr_number=$(gh pr list --state open \
+            --json number \
+            -H "${{ steps.check.outputs.branch }}" \
+            --jq '.[0].number // empty')
           if [[ -n "$pr_number" ]]; then
-            echo "PR already open on branch $branch (#$pr_number)"
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Update pyproject.toml and lockfile
+      - name: Bump and open PR
         if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
+        env:
+          BRANCH: ${{ steps.check.outputs.branch }}
+          NEW_TS: ${{ steps.check.outputs.new_ts }}
+          OLD_TS: ${{ steps.check.outputs.old_ts }}
+          GRPC: ${{ steps.check.outputs.grpc }}
+          PB: ${{ steps.check.outputs.pb }}
+          PYI: ${{ steps.check.outputs.pyi }}
         run: |
           set -euo pipefail
-          new="${{ steps.check.outputs.latest }}"
-          mapfile -t pkgs <<< "${{ steps.check.outputs.packages }}"
-          uv add "${pkgs[@]/%/==$new}"
 
-      - name: Configure Git
-        if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
-        run: |
+          uv add \
+            "anduril-lattice-sdk-grpc-python==$GRPC" \
+            "anduril-lattice-sdk-protocolbuffers-python==$PB" \
+            "anduril-lattice-sdk-protocolbuffers-pyi==$PYI"
+
           git config --local user.email "190288625+anduril-gh-bot@users.noreply.github.com"
-          git config --local user.name "anduril-gh-bot"
+          git config --local user.name  "anduril-gh-bot"
 
-      - name: Commit and open PR
-        if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
-        run: |
-          set -euo pipefail
-          branch="${{ steps.check.outputs.branch }}"
-          new="${{ steps.check.outputs.latest }}"
-          old="${{ steps.check.outputs.current }}"
-
-          git checkout -b "$branch"
+          git checkout -b "$BRANCH"
           git add pyproject.toml uv.lock
-          git commit -m "build(deps): bump Buf packages to $new"
-          git push -u origin "$branch"
+          git commit -m "build(deps): bump Lattice SDK Buf packages to $NEW_TS"
+          git push -u --force-with-lease origin "$BRANCH"
 
           gh pr create \
             --base master \
-            --head "$branch" \
-            --title "build(deps): bump Buf packages to $new" \
-            --body "Bumps Buf-registry packages from \`buf.build/gen/python\` (\`$old\` → \`$new\`)."
+            --head "$BRANCH" \
+            --title "build(deps): bump Lattice SDK Buf packages to $NEW_TS" \
+            --body "Bumps Lattice SDK Buf packages from \`buf.build/gen/python\` (regeneration \`$OLD_TS\` → \`$NEW_TS\`)."
