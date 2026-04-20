@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 0 * * 1"
   workflow_dispatch:
+  # TEMP: remove before merging to master
+  push:
+    branches: [asomera/buf-pkg-update-workflow]
 
 env:
   GITHUB_TOKEN: ${{ secrets.EXT_GITHUB_PAT }}
@@ -21,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.EXT_GITHUB_PAT }}
 
       - uses: astral-sh/setup-uv@v7
 
@@ -29,8 +34,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Single pass over pyproject.toml: discover buf-sourced packages
-          # and their current pins; assert pins are consistent.
+          # Get buf-sourced packages and their current pins from pyproject.toml
           eval "$(python3 <<'PY'
           import tomllib, shlex, sys
           data = tomllib.load(open("pyproject.toml", "rb"))
@@ -52,12 +56,13 @@ jobs:
           if missing:
               sys.exit(f"Buf packages missing == pin in [project.dependencies]: {missing}")
 
-          versions = set(pins.values())
-          if len(versions) > 1:
-              sys.exit(f"Buf pins diverge in pyproject: {pins}")
+          # Invariant: all buf packages share the same trailing timestamp segment
+          timestamps = {v.rsplit(".", 1)[-1] for v in pins.values()}
+          if len(timestamps) > 1:
+              sys.exit(f"Buf pin timestamps diverge in pyproject: {pins}")
 
           print(f"BUF_PACKAGES={shlex.quote('\n'.join(buf_names))}")
-          print(f"CURRENT={shlex.quote(next(iter(versions)))}")
+          print(f"CURRENT_TIMESTAMP={shlex.quote(next(iter(timestamps)))}")
           PY
           )"
 
@@ -69,28 +74,40 @@ jobs:
               | tail -1
           }
 
-          # Query each package's latest version; fail if they diverge
-          versions=$(while IFS= read -r pkg; do get_latest "$pkg"; done <<< "$BUF_PACKAGES" | sort -u)
-          if [[ $(wc -l <<< "$versions") -ne 1 ]]; then
-            echo "::error::Buf registry versions diverge:"$'\n'"$versions"
+          # Query each package's latest version
+          declare -A latest_of
+          while IFS= read -r pkg; do
+            latest_of["$pkg"]=$(get_latest "$pkg")
+          done <<< "$BUF_PACKAGES"
+
+          timestamps=$(printf '%s\n' "${latest_of[@]}" | awk -F. '{print $NF}' | sort -u)
+          if [[ $(wc -l <<< "$timestamps") -ne 1 ]]; then
+            echo "::error::Buf registry timestamps diverge:"$'\n'"${latest_of[*]}"
             exit 1
           fi
-          latest="$versions"
+          latest_timestamp="$timestamps"
 
-          echo "Latest: $latest"
-          echo "Current: $CURRENT"
+          echo "Latest timestamp: $latest_timestamp"
+          echo "Current timestamp: $CURRENT_TIMESTAMP"
 
-          if [[ "$latest" == "$CURRENT" ]]; then
+          if [[ "$latest_timestamp" == "$CURRENT_TIMESTAMP" ]]; then
             echo "Already at latest: no bump needed"
             echo "needs_bump=false" >> "$GITHUB_OUTPUT"
           else
+            # Emit one "name==version" line per package for the update step
+            pins=""
+            for pkg in "${!latest_of[@]}"; do
+              pins+="$pkg==${latest_of[$pkg]}"$'\n'
+            done
+            pins="${pins%$'\n'}"  # strip trailing newline
+
             {
               echo "needs_bump=true"
-              echo "latest=$latest"
-              echo "current=$CURRENT"
-              echo "branch=buf-updater/${latest##*.}"
-              echo "packages<<EOF"
-              echo "$BUF_PACKAGES"
+              echo "latest_timestamp=$latest_timestamp"
+              echo "current_timestamp=$CURRENT_TIMESTAMP"
+              echo "branch=buf-updater/$latest_timestamp"
+              echo "pins<<EOF"
+              echo "$pins"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
           fi
@@ -113,9 +130,8 @@ jobs:
         if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
         run: |
           set -euo pipefail
-          new="${{ steps.check.outputs.latest }}"
-          mapfile -t pkgs <<< "${{ steps.check.outputs.packages }}"
-          uv add "${pkgs[@]/%/==$new}"
+          mapfile -t pins <<< "${{ steps.check.outputs.pins }}"
+          uv add "${pins[@]}"
 
       - name: Configure Git
         if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
@@ -128,16 +144,16 @@ jobs:
         run: |
           set -euo pipefail
           branch="${{ steps.check.outputs.branch }}"
-          new="${{ steps.check.outputs.latest }}"
-          old="${{ steps.check.outputs.current }}"
+          new_ts="${{ steps.check.outputs.latest_timestamp }}"
+          old_ts="${{ steps.check.outputs.current_timestamp }}"
 
           git checkout -b "$branch"
           git add pyproject.toml uv.lock
-          git commit -m "build(deps): bump Buf packages to $new"
+          git commit -m "build(deps): bump Buf packages to $new_ts"
           git push -u origin "$branch"
 
           gh pr create \
             --base master \
             --head "$branch" \
-            --title "build(deps): bump Buf packages to $new" \
-            --body "Bumps Buf-registry packages from \`buf.build/gen/python\` (\`$old\` → \`$new\`)."
+            --title "build(deps): bump Buf packages to $new_ts" \
+            --body "Bumps Buf-registry packages from \`buf.build/gen/python\`."
