@@ -1,0 +1,118 @@
+name: Bump Lattice SDK Buf packages
+
+# Separate workflow for scheduling updates to lattice buf packages
+# since Dependabot can't resolve them
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.EXT_GITHUB_PAT }}
+  GH_TOKEN: ${{ secrets.EXT_GITHUB_PAT }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-lattice-buf
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Bump Lattice SDK Buf packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.EXT_GITHUB_PAT }}
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Resolve versions
+        id: check
+        run: |
+          set -euo pipefail
+
+          get_latest() {
+            curl -fsSL "https://buf.build/gen/python/simple/$1/" \
+              | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
+              | sort -V | tail -n1
+          }
+
+          grpc=$(get_latest anduril-lattice-sdk-grpc-python)
+          pb=$(get_latest anduril-lattice-sdk-protocolbuffers-python)
+          pyi=$(get_latest anduril-lattice-sdk-protocolbuffers-pyi)
+
+          new_ts="${grpc##*.}"
+          if [[ "${pb##*.}" != "$new_ts" || "${pyi##*.}" != "$new_ts" ]]; then
+            echo "::error::Buf regen timestamps diverge: grpc=$grpc pb=$pb pyi=$pyi"
+            exit 1
+          fi
+
+          old_ts=$(grep -oE 'anduril-lattice-sdk-grpc-python==[0-9.]+' pyproject.toml \
+                   | head -n1 | awk -F. '{print $NF}')
+
+          echo "Latest regen: $new_ts"
+          echo "Current regen: $old_ts"
+
+          if [[ "$new_ts" == "$old_ts" ]]; then
+            echo "needs_bump=false" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "needs_bump=true"
+              echo "new_ts=$new_ts"
+              echo "old_ts=$old_ts"
+              echo "grpc=$grpc"
+              echo "pb=$pb"
+              echo "pyi=$pyi"
+              echo "branch=buf-updater/$new_ts"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for existing PR
+        id: pr
+        if: steps.check.outputs.needs_bump == 'true'
+        run: |
+          set -euo pipefail
+          pr_number=$(gh pr list --state open \
+            --json number \
+            -H "${{ steps.check.outputs.branch }}" \
+            --jq '.[0].number // empty')
+          if [[ -n "$pr_number" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump and open PR
+        if: steps.check.outputs.needs_bump == 'true' && steps.pr.outputs.exists == 'false'
+        env:
+          BRANCH: ${{ steps.check.outputs.branch }}
+          NEW_TS: ${{ steps.check.outputs.new_ts }}
+          OLD_TS: ${{ steps.check.outputs.old_ts }}
+          GRPC: ${{ steps.check.outputs.grpc }}
+          PB: ${{ steps.check.outputs.pb }}
+          PYI: ${{ steps.check.outputs.pyi }}
+        run: |
+          set -euo pipefail
+
+          uv add \
+            "anduril-lattice-sdk-grpc-python==$GRPC" \
+            "anduril-lattice-sdk-protocolbuffers-python==$PB" \
+            "anduril-lattice-sdk-protocolbuffers-pyi==$PYI"
+
+          git config --local user.email "190288625+anduril-gh-bot@users.noreply.github.com"
+          git config --local user.name  "anduril-gh-bot"
+
+          git checkout -b "$BRANCH"
+          git add pyproject.toml uv.lock
+          git commit -m "build(deps): bump Lattice SDK Buf packages to $NEW_TS"
+          git push -u --force-with-lease origin "$BRANCH"
+
+          gh pr create \
+            --base master \
+            --head "$BRANCH" \
+            --title "build(deps): bump Lattice SDK Buf packages to $NEW_TS" \
+            --body "Bumps Lattice SDK Buf packages from \`buf.build/gen/python\` (regeneration \`$OLD_TS\` → \`$NEW_TS\`)."
