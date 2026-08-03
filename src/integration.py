@@ -1,7 +1,7 @@
 from logging import Logger
 
-from lattice import Lattice
 from ais import AIS
+from lattice import Lattice
 
 
 class AISLatticeIntegration:

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import logging
 import os
@@ -7,9 +8,9 @@ from asyncio import run
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from ais import AIS
 from integration import AISLatticeIntegration
 from lattice import Lattice
-from ais import AIS
 
 DATASET_PATH = "var/ais_vessels.csv"
 
@@ -74,7 +75,7 @@ if __name__ == "__main__":
     )
     scheduler.start()
 
-    logger.info("Press Ctrl+{0} to exit".format("Break" if os.name == "nt" else "C"))
+    logger.info("Press Ctrl+{} to exit".format("Break" if os.name == "nt" else "C"))
     try:
         while True:
             time.sleep(2)
