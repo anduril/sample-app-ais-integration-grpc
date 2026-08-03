@@ -1,57 +1,55 @@
-from apscheduler.schedulers.background import BackgroundScheduler
+import time
 from datetime import datetime, timedelta, timezone
 from logging import Logger
-from typing import Optional
 
-from anduril.entitymanager.v1.entity_manager_api.pub_pb2_grpc import (
-    EntityManagerAPIStub,
+import grpc
+import requests
+from anduril.entitymanager.v1.classification.pub_pb2 import (
+    Classification,
+    ClassificationInformation,
+    ClassificationLevels,
 )
-
-from anduril.entitymanager.v1.entity_manager_api.pub_pb2 import (
-    GetEntityRequest,
-    GetEntityResponse,
-    PublishEntityRequest,
-    PublishEntityResponse,
-)
-
 from anduril.entitymanager.v1.entity.pub_pb2 import (
     Aliases,
     AlternateId,
     Entity,
     Provenance,
 )
-from anduril.entitymanager.v1.classification.pub_pb2 import (
-    Classification,
-    ClassificationInformation,
-    ClassificationLevels,
+from anduril.entitymanager.v1.entity_manager_api.pub_pb2 import (
+    GetEntityRequest,
+    GetEntityResponse,
+    PublishEntityRequest,
+    PublishEntityResponse,
 )
-
+from anduril.entitymanager.v1.entity_manager_api.pub_pb2_grpc import (
+    EntityManagerAPIStub,
+)
 from anduril.entitymanager.v1.location.pub_pb2 import (
     Location,
     Position,
-)
-from anduril.entitymanager.v1.types.pub_pb2 import (
-    AltIdType,
-    Template,
 )
 from anduril.entitymanager.v1.ontology.pub_pb2 import (
     MilView,
     Ontology,
 )
-
+from anduril.entitymanager.v1.types.pub_pb2 import (
+    AltIdType,
+    Template,
+)
 from anduril.ontology.v1.type.pub_pb2 import (
     Disposition,
     Environment,
 )
-
-import grpc
-import requests
-import time
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from ais import VesselData
 
 EXPIRY_OFFSET_SECONDS = 10
 PORT = 443
+
+
+class AuthTokenError(Exception):
+    pass
 
 
 class Lattice:
@@ -110,12 +108,12 @@ class Lattice:
                     self.token_expiry_time = time.time() + response.json()["expires_in"]
                     return
                 else:
-                    raise Exception(f"Failed to get auth token: {response.json()}")
-        except Exception as err:
-            self.logger.error("Failed to refresh token: %s", err)
+                    raise AuthTokenError(f"Failed to get auth token: {response.json()}")
+        except AuthTokenError:
+            self.logger.exception("Failed to refresh token")
             return
 
-    async def get_entity(self, entity_id) -> Optional[GetEntityResponse]:
+    async def get_entity(self, entity_id) -> GetEntityResponse | None:
         """
         Asynchronously retrieves an entity from the Lattice API using the provided entity ID.
         Usable wrapper around the get_entity API.
@@ -143,12 +141,12 @@ class Lattice:
             )
             channel.close()
             return response
-        except Exception as error:
-            self.logger.error(f"lattice api get entity error {error}")
+        except Exception:
+            self.logger.exception("lattice api get entity error")
             channel.close()
             return None
 
-    async def publish_entity(self, entity) -> Optional[PublishEntityResponse]:
+    async def publish_entity(self, entity) -> PublishEntityResponse | None:
         """
         Asynchronously publishes an entity to the Lattice API.
         Usable wrapper around the publish_entity API.
@@ -175,8 +173,8 @@ class Lattice:
             )
             await channel.close()
             return response
-        except Exception as error:
-            self.logger.error(f"lattice api publish entity error {error}")
+        except Exception:
+            self.logger.exception("lattice api publish entity error")
             channel.close()
             return None
 

@@ -1,7 +1,8 @@
-import pandas as pd
+from collections import namedtuple
 from logging import Logger
 from threading import Lock
-from collections import namedtuple
+
+import pandas as pd
 
 VesselData = namedtuple("VesselData", ["MMSI", "LAT", "LON", "VesselName"])
 
