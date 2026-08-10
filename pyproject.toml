@@ -10,9 +10,9 @@ dependencies = [
     "pandas==2.3.3",
     "requests",
     "protobuf==7.35.1",
-    "anduril-lattice-sdk-grpc-python==1.82.1.1.20260715181514",
-    "anduril-lattice-sdk-protocolbuffers-python==35.1.0.1.20260715181514",
-    "anduril-lattice-sdk-protocolbuffers-pyi==35.1.0.1.20260715181514",
+    "anduril-lattice-sdk-grpc-python==1.83.0.1.20260731221505",
+    "anduril-lattice-sdk-protocolbuffers-python==35.1.0.1.20260731221505",
+    "anduril-lattice-sdk-protocolbuffers-pyi==35.1.0.1.20260731221505",
 ]
 
 [[tool.uv.index]]
