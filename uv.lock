@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -9,38 +9,38 @@ resolution-markers = [
 
 [[package]]
 name = "anduril-lattice-sdk-grpc-python"
-version = "1.84.0.1.20260927225940+7547a61b1e5a"
+version = "1.84.0.1.20261002215841+fa85a790fd91"
 source = { registry = "https://buf.build/gen/python" }
 dependencies = [
     { name = "anduril-lattice-sdk-protocolbuffers-python" },
     { name = "grpcio" },
 ]
 wheels = [
-    { url = "https://buf.build/gen/python/anduril-lattice-sdk-grpc-python/anduril_lattice_sdk_grpc_python-1.84.0.1.20260927225940+7547a61b1e5a-py3-none-any.whl", upload-time = "2026-09-27T22:59:40Z" },
+    { url = "https://buf.build/gen/python/anduril-lattice-sdk-grpc-python/anduril_lattice_sdk_grpc_python-1.84.0.1.20261002215841+fa85a790fd91-py3-none-any.whl", upload-time = "2026-10-02T21:58:41Z" },
 ]
 
 [[package]]
 name = "anduril-lattice-sdk-protocolbuffers-pyi"
-version = "36.2.0.1.20260927225940+7547a61b1e5a"
+version = "36.2.0.1.20261002215841+fa85a790fd91"
 source = { registry = "https://buf.build/gen/python" }
 dependencies = [
     { name = "protobuf" },
     { name = "types-protobuf" },
 ]
 wheels = [
-    { url = "https://buf.build/gen/python/anduril-lattice-sdk-protocolbuffers-pyi/anduril_lattice_sdk_protocolbuffers_pyi-36.2.0.1.20260927225940+7547a61b1e5a-py3-none-any.whl", upload-time = "2026-09-27T22:59:40Z" },
+    { url = "https://buf.build/gen/python/anduril-lattice-sdk-protocolbuffers-pyi/anduril_lattice_sdk_protocolbuffers_pyi-36.2.0.1.20261002215841+fa85a790fd91-py3-none-any.whl", upload-time = "2026-10-02T21:58:41Z" },
 ]
 
 [[package]]
 name = "anduril-lattice-sdk-protocolbuffers-python"
-version = "36.2.0.1.20260927225940+7547a61b1e5a"
+version = "36.2.0.1.20261002215841+fa85a790fd91"
 source = { registry = "https://buf.build/gen/python" }
 dependencies = [
     { name = "anduril-lattice-sdk-protocolbuffers-pyi" },
     { name = "protobuf" },
 ]
 wheels = [
-    { url = "https://buf.build/gen/python/anduril-lattice-sdk-protocolbuffers-python/anduril_lattice_sdk_protocolbuffers_python-36.2.0.1.20260927225940+7547a61b1e5a-py3-none-any.whl", upload-time = "2026-09-27T22:59:40Z" },
+    { url = "https://buf.build/gen/python/anduril-lattice-sdk-protocolbuffers-python/anduril_lattice_sdk_protocolbuffers_python-36.2.0.1.20261002215841+fa85a790fd91-py3-none-any.whl", upload-time = "2026-10-02T21:58:41Z" },
 ]
 
 [[package]]
@@ -576,9 +576,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anduril-lattice-sdk-grpc-python", specifier = "==1.84.0.1.20260927225940", index = "https://buf.build/gen/python" },
-    { name = "anduril-lattice-sdk-protocolbuffers-pyi", specifier = "==36.2.0.1.20260927225940", index = "https://buf.build/gen/python" },
-    { name = "anduril-lattice-sdk-protocolbuffers-python", specifier = "==36.2.0.1.20260927225940", index = "https://buf.build/gen/python" },
+    { name = "anduril-lattice-sdk-grpc-python", specifier = "==1.84.0.1.20261002215841", index = "https://buf.build/gen/python" },
+    { name = "anduril-lattice-sdk-protocolbuffers-pyi", specifier = "==36.2.0.1.20261002215841", index = "https://buf.build/gen/python" },
+    { name = "anduril-lattice-sdk-protocolbuffers-python", specifier = "==36.2.0.1.20261002215841", index = "https://buf.build/gen/python" },
     { name = "apscheduler", specifier = "==3.11.3" },
     { name = "grpcio", specifier = "==1.84.0" },
     { name = "pandas", specifier = "==2.3.3" },
