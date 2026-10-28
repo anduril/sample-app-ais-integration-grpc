@@ -18,10 +18,12 @@ DATASET_PATH = "var/ais_vessels.csv"
 def validate_config(cfg):
     if "lattice-endpoint" not in cfg:
         raise ValueError("missing lattice-endpoint")
-    if "lattice-client-id" not in cfg:
-        raise ValueError("missing lattice-client-id")
-    if "lattice-client-secret" not in cfg:
-        raise ValueError("missing lattice-client-secret")
+    if not cfg.get("environment-token") and not (
+        cfg.get("lattice-client-id") and cfg.get("lattice-client-secret")
+    ):
+        raise ValueError(
+            "missing environment-token, or lattice-client-id and lattice-client-secret"
+        )
     if "sandboxes-token" not in cfg:
         raise ValueError("missing sandboxes-token")
     if "entity-update-rate-seconds" not in cfg:
@@ -59,8 +61,9 @@ if __name__ == "__main__":
         logger,
         cfg["lattice-endpoint"],
         sandboxes_token=cfg["sandboxes-token"],
-        client_id=cfg["lattice-client-id"],
-        client_secret=cfg["lattice-client-secret"],
+        environment_token=cfg.get("environment-token"),
+        client_id=cfg.get("lattice-client-id"),
+        client_secret=cfg.get("lattice-client-secret"),
     )
 
     ais_lattice_integration_hook = AISLatticeIntegration(logger, lattice_api, ais_data)
