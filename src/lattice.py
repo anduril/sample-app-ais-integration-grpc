@@ -58,32 +58,31 @@ class Lattice:
         logger: Logger,
         lattice_endpoint: str,
         sandboxes_token: str,
-        client_id: str,
-        client_secret: str,
+        environment_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
     ):
         self.logger = logger
         self.lattice_endpoint = lattice_endpoint
         self.port = PORT
         self.client_id = client_id
         self.client_secret = client_secret
-
-        if sandboxes_token:
-            self.sandboxes_token = sandboxes_token
-            self.generated_metadata = (
-                ("anduril-sandbox-authorization", f"Bearer {sandboxes_token}"),
-            )
+        self.sandboxes_token = sandboxes_token
 
         self.token_expiry_time = 0
-        self.auth_token = ""
-        self.refresh_token()
+        self.auth_token = environment_token or ""
 
-        self.generated_metadata = self.generated_metadata + (
-            ("authorization", "Bearer " + self.auth_token),
+        if not environment_token:
+            self.refresh_token()
+            self.scheduler = BackgroundScheduler()
+            self.scheduler.add_job(self.refresh_token, "interval", seconds=60)
+            self.scheduler.start()
+
+    def metadata(self):
+        return (
+            ("anduril-sandbox-authorization", f"Bearer {self.sandboxes_token}"),
+            ("authorization", f"Bearer {self.auth_token}"),
         )
-
-        self.scheduler = BackgroundScheduler()
-        self.scheduler.add_job(self.refresh_token, "interval", seconds=60)
-        self.scheduler.start()
 
     def refresh_token(self):
         try:
@@ -108,7 +107,7 @@ class Lattice:
                     self.token_expiry_time = time.time() + response.json()["expires_in"]
                     return
                 else:
-                    raise AuthTokenError(f"Failed to get auth token: {response.json()}")
+                    raise AuthTokenError(f"Failed to get auth token: {response.text}")
         except AuthTokenError:
             self.logger.exception("Failed to refresh token")
             return
@@ -137,13 +136,13 @@ class Lattice:
 
         try:
             response = await entity_manager_stub.GetEntity(
-                GetEntityRequest(entity_id=entity_id), metadata=self.generated_metadata
+                GetEntityRequest(entity_id=entity_id), metadata=self.metadata()
             )
-            channel.close()
+            await channel.close()
             return response
         except Exception:
             self.logger.exception("lattice api get entity error")
-            channel.close()
+            await channel.close()
             return None
 
     async def publish_entity(self, entity) -> PublishEntityResponse | None:
@@ -169,13 +168,13 @@ class Lattice:
 
         try:
             response = await entity_manager_stub.PublishEntity(
-                PublishEntityRequest(entity=entity), metadata=self.generated_metadata
+                PublishEntityRequest(entity=entity), metadata=self.metadata()
             )
             await channel.close()
             return response
         except Exception:
             self.logger.exception("lattice api publish entity error")
-            channel.close()
+            await channel.close()
             return None
 
     @staticmethod
@@ -232,8 +231,8 @@ class Lattice:
             ),
             ontology=Ontology(
                 template=Template.TEMPLATE_TRACK,
-                # For more information, please refer to https://docs.anduril.com/entity/publishing-your-first-entity#define-ontology
-                platform_type="Surface_Vessel",
+                # For more information, please refer to https://developer.anduril.com/guides/entities/publish#set-platform-type
+                platform_type="Surface Vessel",
             ),
             provenance=Provenance(
                 data_type="vessel-data",
